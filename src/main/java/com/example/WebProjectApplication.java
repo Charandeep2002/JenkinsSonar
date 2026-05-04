@@ -26,6 +26,10 @@ public class WebProjectApplication {
 
     private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    // ⚠️ TEMP ONLY — replace with DB value or secure config
+    private static final String DUMMY_HASH =
+            "$2a$10$REPLACE_THIS_WITH_NEW_HASH_AND_REMOVE_LATER";
+
     public static void main(String[] args) {
         SpringApplication.run(WebProjectApplication.class, args);
     }
@@ -69,7 +73,9 @@ public class WebProjectApplication {
 
     @PostMapping("/login")
     public String login(@RequestParam String username, @RequestParam String password) {
-        String storedHashedPassword = getUserPassword(username);
+
+        // TEMP: Replace with DB lookup
+        String storedHashedPassword = DUMMY_HASH;
 
         if (storedHashedPassword != null && passwordEncoder.matches(password, storedHashedPassword)) {
             return "Login Successful!";
@@ -90,27 +96,20 @@ public class WebProjectApplication {
             }
 
         } catch (Exception e) {
-            e.printStackTrace(); // helpful for debugging
+            e.printStackTrace();
             return "Database Error!";
         }
         return "User not found";
     }
 
-    // Escape HTML (basic protection)
+    // Utility: Escape HTML to prevent XSS
     private String escapeHtml(String input) {
         if (input == null) return "";
         return input.replace("<", "&lt;").replace(">", "&gt;");
     }
 
-    // Restrict redirect URLs
+    // Utility: Validate redirect URL
     private boolean isValidRedirect(String url) {
         return url != null && url.startsWith("https://trustedsite.com");
-    }
-
-    // Simulated password fetch (IMPORTANT FIX)
-    private String getUserPassword(String username) {
-        // Always return SAME hash (not re-encode every time)
-        return "$2a$10$7QJv1Q8Q7vYl6u2zj1G9UuJrY7j0zJ9Z6W6kFQ5Yl5eK9xkX1Zc1G"; 
-        // password = "securepassword"
     }
 }
