@@ -15,13 +15,13 @@ import java.sql.ResultSet;
 @RestController
 public class WebProjectApplication {
 
-    @Value("${database.url}")
+    @Value("${database.url:jdbc:mysql://localhost:3306/test}")
     private String databaseUrl;
 
-    @Value("${database.user}")
+    @Value("${database.user:root}")
     private String databaseUser;
 
-    @Value("${database.password}")
+    @Value("${database.password:password}")
     private String databasePassword;
 
     private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -32,19 +32,16 @@ public class WebProjectApplication {
 
     @GetMapping("/")
     public String home() {
-        String riskyString = "SafeString"; // Fixed Null Pointer Exception
-        int length = riskyString.length();
-
         return "<html>" +
                 "<head><title>CloudFolks HUB</title></head>" +
                 "<body style='text-align:center; background-color:#f0f8ff;'>" +
                 "<h1 style='color: #4CAF50;'>Welcome to <span style='color: #00008B;'>CloudFolks HUB</span>!</h1>" +
                 "<p style='font-size:20px; color: #555;'>Empowering Your DevOps Journey</p>" +
-                "<form id='form' method='post' action='/submit' style='margin-top:20px;'>" +
-                "<label for='name'>Name:</label><br>" +
-                "<input type='text' id='name' name='name' required><br><br>" +
-                "<label for='email'>Email:</label><br>" +
-                "<input type='email' id='email' name='email' required><br><br>" +
+                "<form method='post' action='/submit' style='margin-top:20px;'>" +
+                "<label>Name:</label><br>" +
+                "<input type='text' name='name' required><br><br>" +
+                "<label>Email:</label><br>" +
+                "<input type='email' name='email' required><br><br>" +
                 "<button type='submit'>Submit</button>" +
                 "</form>" +
                 "</body>" +
@@ -57,7 +54,7 @@ public class WebProjectApplication {
                 "<head><title>Form Submitted</title></head>" +
                 "<body style='text-align:center; background-color:#f0f8ff;'>" +
                 "<h1 style='color: #4CAF50;'>Thank You, " + escapeHtml(name) + "!</h1>" +
-                "<p style='font-size:20px; color: #555;'>Your email (" + escapeHtml(email) + ") has been submitted successfully.</p>" +
+                "<p style='font-size:20px; color: #555;'>Your email (" + escapeHtml(email) + ") submitted successfully.</p>" +
                 "</body>" +
                 "</html>";
     }
@@ -67,13 +64,13 @@ public class WebProjectApplication {
         if (!isValidRedirect(url)) {
             return "Invalid Redirect URL!";
         }
-        return "<script>window.location.href='" + url + "'</script>";
+        return "<script>window.location.href='" + escapeHtml(url) + "'</script>";
     }
 
     @PostMapping("/login")
     public String login(@RequestParam String username, @RequestParam String password) {
-        // Secure Password Verification using BCrypt
         String storedHashedPassword = getUserPassword(username);
+
         if (storedHashedPassword != null && passwordEncoder.matches(password, storedHashedPassword)) {
             return "Login Successful!";
         }
@@ -84,31 +81,36 @@ public class WebProjectApplication {
     public String fetchUser(@RequestParam String username) {
         try (Connection conn = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword);
              PreparedStatement stmt = conn.prepareStatement("SELECT username FROM users WHERE username = ?")) {
-            
+
             stmt.setString(1, username);
             ResultSet rs = stmt.executeQuery();
+
             if (rs.next()) {
                 return "User found: " + escapeHtml(rs.getString("username"));
             }
+
         } catch (Exception e) {
+            e.printStackTrace(); // helpful for debugging
             return "Database Error!";
         }
         return "User not found";
     }
 
-    // Utility: Escapes HTML to prevent XSS attacks
+    // Escape HTML (basic protection)
     private String escapeHtml(String input) {
-        return input.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+        if (input == null) return "";
+        return input.replace("<", "&lt;").replace(">", "&gt;");
     }
 
-    // Utility: Check if URL is whitelisted
+    // Restrict redirect URLs
     private boolean isValidRedirect(String url) {
-        return url.startsWith("https://trustedsite.com");
+        return url != null && url.startsWith("https://trustedsite.com");
     }
 
-    // Utility: Fetch hashed password from DB (Simulation)
+    // Simulated password fetch (IMPORTANT FIX)
     private String getUserPassword(String username) {
-        // In a real application, fetch hashed password from DB
-        return passwordEncoder.encode("securepassword");
+        // Always return SAME hash (not re-encode every time)
+        return "$2a$10$7QJv1Q8Q7vYl6u2zj1G9UuJrY7j0zJ9Z6W6kFQ5Yl5eK9xkX1Zc1G"; 
+        // password = "securepassword"
     }
 }
